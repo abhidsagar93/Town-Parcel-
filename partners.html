@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Partners — Town Parcel Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<div class="admin-shell">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div style="width:38px;height:38px;border-radius:8px;background:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--black);">TP</div>
+      <div class="name">Town Parcel <span>Admin</span></div>
+    </div>
+    <nav class="nav-group">
+      <a class="nav-link" href="dashboard.html"><span class="ico">&#9635;</span> Dashboard</a>
+      <a class="nav-link" href="bookings.html"><span class="ico">&#128230;</span> Bookings</a>
+      <a class="nav-link active" href="partners.html"><span class="ico">&#127970;</span> Partners</a>
+      <a class="nav-link" href="riders.html"><span class="ico">&#128690;</span> Riders</a>
+      <a class="nav-link" href="messages.html"><span class="ico">&#9993;</span> Messages</a>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="email" data-admin-email>Loading…</div>
+      <button class="btn-logout" onclick="adminLogout()">Log Out</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="mobile-topbar">
+      <button id="mobileMenuBtn">&#9776;</button>
+      <strong>Town Parcel Admin</strong>
+    </div>
+    <div class="topbar">
+      <div>
+        <h1 id="pageTitle">Partners</h1>
+        <div class="sub" id="pageSub"></div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <input class="input input-search" id="searchInput" placeholder="Search partner ID, business, owner, mobile...">
+          <select class="input" id="statusFilter"></select>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-outline btn-sm" id="refreshBtn">&#8635; Refresh</button>
+          <button class="btn btn-gold btn-sm" id="exportBtn">&#8595; Export CSV</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="pagination" id="paginationBar"></div>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW MODAL -->
+<div class="modal-overlay" id="viewModalOverlay">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeViewModal()">&times;</button>
+    <h3>Partner Details</h3>
+    <div class="modal-grid" id="viewModalBody"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeViewModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModalOverlay">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeEditModal()">&times;</button>
+    <h3>Edit Partner</h3>
+    <input type="hidden" id="editModalId">
+    <div class="modal-grid" id="editModalBody"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeEditModal()">Cancel</button>
+      <button class="btn btn-gold" id="editSaveBtn" onclick="saveEditModal()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<div id="toastHost"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/auth-guard.js"></script>
+<script src="js/ui-utils.js"></script>
+<script src="js/table-page.js"></script>
+<script>
+(async () => {
+  const session = await requireAdminAuth();
+  if(!session) return;
+
+  initTablePage({
+    tableName: 'partner_registrations',
+    title: 'Partners',
+    subtitle: 'All business partner applications',
+    idField: 'id',
+    statusField: 'status',
+    statusOptions: ['pending','approved','rejected','suspended'],
+    searchFields: ['partner_id','business_name','owner_name','mobile'],
+    columns: [
+      { key:'created_at', label:'Date', type:'date' },
+      { key:'partner_id', label:'Partner ID' },
+      { key:'business_name', label:'Business' },
+      { key:'owner_name', label:'Owner' },
+      { key:'mobile', label:'Mobile' },
+      { key:'business_type', label:'Category' },
+      { key:'city', label:'City' },
+      { key:'status', label:'Status', type:'status' }
+    ],
+    editableFields: [
+      { key:'business_name', label:'Business Name' },
+      { key:'owner_name', label:'Owner Name' },
+      { key:'mobile', label:'Mobile' },
+      { key:'whatsapp', label:'WhatsApp' },
+      { key:'email', label:'Email' },
+      { key:'business_type', label:'Business Type' },
+      { key:'business_address', label:'Business Address' },
+      { key:'area', label:'Area' },
+      { key:'city', label:'City' },
+      { key:'pincode', label:'Pincode' },
+      { key:'gst_number', label:'GST Number' },
+      { key:'business_license', label:'Business License' },
+      { key:'opening_time', label:'Opening Time' },
+      { key:'closing_time', label:'Closing Time' },
+      { key:'pickup_contact', label:'Pickup Contact' },
+      { key:'pickup_phone', label:'Pickup Phone' },
+      { key:'bank_account_name', label:'Bank A/C Name' },
+      { key:'bank_account_number', label:'Bank A/C Number' },
+      { key:'ifsc_code', label:'IFSC Code' },
+      { key:'upi_id', label:'UPI ID' },
+      { key:'status', label:'Status', type:'select', options:['pending','approved','rejected','suspended'] },
+      { key:'remarks', label:'Remarks', type:'textarea' }
+    ],
+    quickLinks: (row) => ([
+      { icon:'&#128222;', label:'Call', href:'tel:' + (row.mobile||'') },
+      { icon:'&#128172;', label:'WhatsApp', href:'https://wa.me/91' + (row.mobile||'').replace(/\D/g,'') },
+      { icon:'&#9993;', label:'Email', href:'mailto:' + (row.email||'') }
+    ]),
+    csvFilename: 'town_parcel_partners.csv'
+  });
+})();
+</script>
+</body>
+</html>
