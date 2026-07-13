@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Riders — Town Parcel Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<div class="admin-shell">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div style="width:38px;height:38px;border-radius:8px;background:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--black);">TP</div>
+      <div class="name">Town Parcel <span>Admin</span></div>
+    </div>
+    <nav class="nav-group">
+      <a class="nav-link" href="dashboard.html"><span class="ico">&#9635;</span> Dashboard</a>
+      <a class="nav-link" href="bookings.html"><span class="ico">&#128230;</span> Bookings</a>
+      <a class="nav-link" href="personal-deliveries.html"><span class="ico">&#128100;</span> Personal Deliveries</a>
+      <a class="nav-link" href="partners.html"><span class="ico">&#127970;</span> Partners</a>
+      <a class="nav-link active" href="riders.html"><span class="ico">&#128690;</span> Riders</a>
+      <a class="nav-link" href="messages.html"><span class="ico">&#9993;</span> Messages</a>
+      <a class="nav-link" href="customers.html"><span class="ico">&#128100;</span> Customers</a>
+      <a class="nav-link" href="reports.html"><span class="ico">&#128202;</span> Reports</a>
+      <a class="nav-link" href="settings.html"><span class="ico">&#9881;</span> Settings</a>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="email" data-admin-email>Loading…</div>
+      <button class="btn-logout" onclick="adminLogout()">Log Out</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="mobile-topbar">
+      <button id="mobileMenuBtn">&#9776;</button>
+      <strong>Town Parcel Admin</strong>
+    </div>
+    <div class="topbar">
+      <div>
+        <h1 id="pageTitle">Riders</h1>
+        <div class="sub" id="pageSub"></div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <input class="input input-search" id="searchInput" placeholder="Search rider ID, name, mobile...">
+          <select class="input" id="statusFilter"></select>
+        </div>
+        <div style="display:flex; gap:8px;">
+          <button class="btn btn-outline btn-sm" id="refreshBtn">&#8635; Refresh</button>
+          <button class="btn btn-gold btn-sm" id="exportBtn">&#8595; Export CSV</button>
+          <button class="btn btn-dark btn-sm" id="exportExcelBtn">&#8595; Export Excel</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead id="tableHead"></thead>
+          <tbody id="tableBody"></tbody>
+        </table>
+      </div>
+
+      <div class="pagination" id="paginationBar"></div>
+    </div>
+  </div>
+</div>
+
+<!-- VIEW MODAL -->
+<div class="modal-overlay" id="viewModalOverlay">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeViewModal()">&times;</button>
+    <h3>Rider Details</h3>
+    <div class="modal-grid" id="viewModalBody"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeViewModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="editModalOverlay">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeEditModal()">&times;</button>
+    <h3>Edit Rider</h3>
+    <input type="hidden" id="editModalId">
+    <div class="modal-grid" id="editModalBody"></div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeEditModal()">Cancel</button>
+      <button class="btn btn-gold" id="editSaveBtn" onclick="saveEditModal()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<div id="toastHost"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/auth-guard.js"></script>
+<script src="js/ui-utils.js"></script>
+<script src="js/table-page.js"></script>
+<script>
+(async () => {
+  const session = await requireAdminAuth();
+  if(!session) return;
+
+  initTablePage({
+    tableName: 'rider_registrations',
+    title: 'Riders',
+    subtitle: 'All delivery rider applications',
+    idField: 'id',
+    statusField: 'status',
+    statusOptions: ['pending','approved','rejected','suspended','active','offline'],
+    searchFields: ['rider_id','full_name','mobile'],
+    columns: [
+      { key:'created_at', label:'Date', type:'date' },
+      { key:'rider_id', label:'Rider ID' },
+      { key:'full_name', label:'Name' },
+      { key:'mobile', label:'Mobile' },
+      { key:'vehicle_type', label:'Vehicle' },
+      { key:'service_area', label:'Area' },
+      { key:'city', label:'City' },
+      { key:'status', label:'Status', type:'status' }
+    ],
+    editableFields: [
+      { key:'full_name', label:'Full Name' },
+      { key:'mobile', label:'Mobile' },
+      { key:'whatsapp', label:'WhatsApp' },
+      { key:'email', label:'Email' },
+      { key:'date_of_birth', label:'Date of Birth', type:'date' },
+      { key:'gender', label:'Gender' },
+      { key:'address', label:'Address' },
+      { key:'city', label:'City' },
+      { key:'pincode', label:'Pincode' },
+      { key:'service_area', label:'Service Area' },
+      { key:'vehicle_type', label:'Vehicle Type' },
+      { key:'vehicle_number', label:'Vehicle Number' },
+      { key:'driving_license_number', label:'Driving Licence No.' },
+      { key:'aadhar_number', label:'Aadhaar Number' },
+      { key:'emergency_conntact_number', label:'Emergency Contact' },
+      { key:'bank_account_name', label:'Bank A/C Name' },
+      { key:'bank_account_number', label:'Bank A/C Number' },
+      { key:'ifsc_code', label:'IFSC Code' },
+      { key:'upi_id', label:'UPI ID' },
+      { key:'status', label:'Status', type:'select', options:['pending','approved','rejected','suspended','active','offline'] },
+      { key:'remarks', label:'Remarks', type:'textarea' }
+    ],
+    quickLinks: (row) => ([
+      { icon:'&#128222;', label:'Call', href:'tel:' + (row.mobile||'') },
+      { icon:'&#128172;', label:'WhatsApp', href:'https://wa.me/91' + (row.mobile||'').replace(/\D/g,'') }
+    ]),
+    csvFilename: 'town_parcel_riders.csv'
+  });
+})();
+</script>
+</body>
+</html>
