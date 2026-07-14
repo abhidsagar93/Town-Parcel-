@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Settings — Town Parcel Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/admin.css">
+<style>
+  .settings-form{display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:820px;}
+  .settings-form .full{grid-column:1 / -1;}
+  .settings-form label{display:block;font-size:.78rem;font-weight:700;color:var(--gray);text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px;}
+  .settings-form input, .settings-form textarea{
+    width:100%;
+    border:1.5px solid var(--gray-light);
+    border-radius:9px;
+    padding:10px 12px;
+    font-size:.9rem;
+  }
+  .settings-form input:focus, .settings-form textarea:focus{outline:none;border-color:var(--gold);}
+  .settings-form textarea{min-height:80px;resize:vertical;}
+  .note-box{
+    background:var(--cream);
+    border-radius:12px;
+    padding:16px 18px;
+    font-size:.83rem;
+    color:var(--gray);
+    margin-top:24px;
+    max-width:820px;
+    line-height:1.6;
+  }
+  @media (max-width:700px){.settings-form{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<div class="admin-shell">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div style="width:38px;height:38px;border-radius:8px;background:var(--gold);display:flex;align-items:center;justify-content:center;font-weight:900;color:var(--black);">TP</div>
+      <div class="name">Town Parcel <span>Admin</span></div>
+    </div>
+    <nav class="nav-group">
+      <a class="nav-link" href="dashboard.html"><span class="ico">&#9635;</span> Dashboard</a>
+      <a class="nav-link" href="bookings.html"><span class="ico">&#128230;</span> Bookings</a>
+      <a class="nav-link" href="personal-deliveries.html"><span class="ico">&#128100;</span> Personal Deliveries</a>
+      <a class="nav-link" href="partners.html"><span class="ico">&#127970;</span> Partners</a>
+      <a class="nav-link" href="riders.html"><span class="ico">&#128690;</span> Riders</a>
+      <a class="nav-link" href="messages.html"><span class="ico">&#9993;</span> Messages</a>
+      <a class="nav-link" href="customers.html"><span class="ico">&#128100;</span> Customers</a>
+      <a class="nav-link" href="reports.html"><span class="ico">&#128202;</span> Reports</a>
+      <a class="nav-link active" href="settings.html"><span class="ico">&#9881;</span> Settings</a>
+    </nav>
+    <div class="sidebar-foot">
+      <div class="email" data-admin-email>Loading…</div>
+      <button class="btn-logout" onclick="adminLogout()">Log Out</button>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="mobile-topbar">
+      <button id="mobileMenuBtn">&#9776;</button>
+      <strong>Town Parcel Admin</strong>
+    </div>
+    <div class="topbar">
+      <div>
+        <h1>Settings</h1>
+        <div class="sub">Company info &amp; delivery configuration</div>
+      </div>
+    </div>
+
+    <div class="content">
+      <div class="panel">
+        <h2>Company &amp; Contact</h2>
+        <div class="settings-form" id="settingsForm">
+          <div>
+            <label for="companyName">Company Name</label>
+            <input type="text" id="companyName">
+          </div>
+          <div>
+            <label for="phone">Phone</label>
+            <input type="text" id="phone">
+          </div>
+          <div>
+            <label for="whatsapp">WhatsApp</label>
+            <input type="text" id="whatsapp">
+          </div>
+          <div>
+            <label for="email">Email</label>
+            <input type="text" id="email">
+          </div>
+          <div class="full">
+            <label for="address">Address</label>
+            <input type="text" id="address">
+          </div>
+          <div class="full">
+            <label for="workingHours">Working Hours</label>
+            <input type="text" id="workingHours">
+          </div>
+          <div>
+            <label for="deliveryCharge">Default Delivery Charge (₹)</label>
+            <input type="number" id="deliveryCharge" step="0.01">
+          </div>
+          <div>
+            <label for="minimumOrder">Minimum Order Value (₹)</label>
+            <input type="number" id="minimumOrder" step="0.01">
+          </div>
+          <div>
+            <label for="maxDistance">Maximum Delivery Distance (km)</label>
+            <input type="number" id="maxDistance" step="0.1">
+          </div>
+          <div class="full">
+            <label for="serviceAreas">Service Areas (comma-separated)</label>
+            <textarea id="serviceAreas"></textarea>
+          </div>
+        </div>
+        <div style="margin-top:20px;">
+          <button class="btn btn-gold" id="saveSettingsBtn">Save Changes</button>
+          <span id="settingsSavedNote" style="margin-left:12px;font-size:.85rem;color:var(--success);display:none;">Saved ✓</span>
+        </div>
+      </div>
+
+      <div class="note-box">
+        <strong>Not included here:</strong> logo upload, theme switching, and full database backup/restore
+        aren't available in this settings page — logo upload needs file storage, theme switching would need
+        rework of the public site's CSS to read from these settings, and full backup/restore of your Supabase
+        database should be done from the Supabase Dashboard directly (Database → Backups) rather than from a
+        client-side page, for safety. Everything above (company info, delivery charges, service areas) is
+        stored in a single settings row in your <code>app_settings</code> table and is ready to be wired into
+        your public website's forms later if you want defaults to pull from here.
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toastHost"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-client.js"></script>
+<script src="js/auth-guard.js"></script>
+<script src="js/ui-utils.js"></script>
+<script>
+async function loadSettings(){
+  try{
+    const { data, error } = await sb.from('app_settings').select('*').eq('id', 1).single();
+    if(error) throw error;
+
+    document.getElementById('companyName').value = data.company_name || '';
+    document.getElementById('phone').value = data.phone || '';
+    document.getElementById('whatsapp').value = data.whatsapp || '';
+    document.getElementById('email').value = data.email || '';
+    document.getElementById('address').value = data.address || '';
+    document.getElementById('workingHours').value = data.working_hours || '';
+    document.getElementById('deliveryCharge').value = data.delivery_charge ?? '';
+    document.getElementById('minimumOrder').value = data.minimum_order ?? '';
+    document.getElementById('maxDistance').value = data.maximum_distance_km ?? '';
+    document.getElementById('serviceAreas').value = data.service_areas || '';
+  }catch(err){
+    console.error('Load settings failed:', err);
+    showToast('Could not load settings — check your connection', 'error');
+  }
+}
+
+async function saveSettings(){
+  const btn = document.getElementById('saveSettingsBtn');
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Saving...';
+
+  const update = {
+    company_name: document.getElementById('companyName').value.trim(),
+    phone: document.getElementById('phone').value.trim(),
+    whatsapp: document.getElementById('whatsapp').value.trim(),
+    email: document.getElementById('email').value.trim(),
+    address: document.getElementById('address').value.trim(),
+    working_hours: document.getElementById('workingHours').value.trim(),
+    delivery_charge: document.getElementById('deliveryCharge').value ? parseFloat(document.getElementById('deliveryCharge').value) : null,
+    minimum_order: document.getElementById('minimumOrder').value ? parseFloat(document.getElementById('minimumOrder').value) : null,
+    maximum_distance_km: document.getElementById('maxDistance').value ? parseFloat(document.getElementById('maxDistance').value) : null,
+    service_areas: document.getElementById('serviceAreas').value.trim(),
+    updated_at: new Date().toISOString()
+  };
+
+  try{
+    const { error } = await sb.from('app_settings').update(update).eq('id', 1);
+    if(error) throw error;
+
+    showToast('Settings saved', 'success');
+    const note = document.getElementById('settingsSavedNote');
+    note.style.display = 'inline';
+    setTimeout(()=>{ note.style.display = 'none'; }, 2500);
+  }catch(err){
+    console.error('Save settings failed:', err);
+    showToast('Could not save settings — check your connection', 'error');
+  }finally{
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+  }
+}
+
+document.getElementById('saveSettingsBtn').addEventListener('click', saveSettings);
+
+(async () => {
+  const session = await requireAdminAuth();
+  if(!session) return;
+  loadSettings();
+})();
+</script>
+</body>
+</html>
