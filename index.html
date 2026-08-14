@@ -689,7 +689,7 @@ function requireAuth(role, fn){
   if (!state.profile){ go("#/login"); return; }
   const allowed = Array.isArray(role) ? role : (role ? [role] : null);
   if (allowed && !allowed.includes(state.profile.role)){ toast("You don't have access to that page.","err"); go("#/home"); return; }
-  fn();
+  return fn();
 }
 
 // ---------------------------------------------------------------------
@@ -1153,13 +1153,15 @@ function viewRegisterStaff(){
 document.addEventListener("submit", async (e)=>{
   if (e.target.id === "register-staff-form"){
     e.preventDefault();
-    const fd = new FormData(e.target);
-    const { error } = await sb.auth.signUp({
-      email: fd.get("email"), password: fd.get("password"),
-      options: { data: { full_name: fd.get("full_name"), phone: fd.get("phone"), role: "staff" } }
-    });
-    if (error) return toast(error.message, "err");
-    toast("Account created! If your email was on the invite list, you now have Ops Manager access.");
+    try {
+      const fd = new FormData(e.target);
+      const { error } = await sb.auth.signUp({
+        email: fd.get("email"), password: fd.get("password"),
+        options: { data: { full_name: fd.get("full_name"), phone: fd.get("phone"), role: "staff" } }
+      });
+      if (error) return toast(error.message, "err");
+      toast("Account created! If your email was on the invite list, you now have Ops Manager access.");
+    } catch(err){ console.error(err); toast("Something went wrong creating your account — please try again.","err"); }
   }
 });
 function roleTab(value, label, active){
@@ -1191,23 +1193,27 @@ function selectRole(value){
 document.addEventListener("submit", async (e) => {
   if (e.target.id === "login-form"){
     e.preventDefault();
-    const fd = new FormData(e.target);
-    const { error } = await sb.auth.signInWithPassword({ email: fd.get("email"), password: fd.get("password") });
-    if (error) return toast(error.message, "err");
-    toast("Welcome back!");
+    try {
+      const fd = new FormData(e.target);
+      const { error } = await sb.auth.signInWithPassword({ email: fd.get("email"), password: fd.get("password") });
+      if (error) return toast(error.message, "err");
+      toast("Welcome back!");
+    } catch(err){ console.error(err); toast("Something went wrong logging in — please try again.","err"); }
   }
   if (e.target.id === "register-form"){
     e.preventDefault();
-    const role = e.target.dataset.role || "customer";
-    if (role === "store_owner"){ go("#/register-store"); return; }
-    if (role === "delivery_partner"){ go("#/register-rider"); return; }
-    const fd = new FormData(e.target);
-    const { data, error } = await sb.auth.signUp({
-      email: fd.get("email"), password: fd.get("password"),
-      options: { data: { full_name: fd.get("full_name"), phone: fd.get("phone"), role } }
-    });
-    if (error) return toast(error.message, "err");
-    toast("Account created! You're logged in.");
+    try {
+      const role = e.target.dataset.role || "customer";
+      if (role === "store_owner"){ go("#/register-store"); return; }
+      if (role === "delivery_partner"){ go("#/register-rider"); return; }
+      const fd = new FormData(e.target);
+      const { data, error } = await sb.auth.signUp({
+        email: fd.get("email"), password: fd.get("password"),
+        options: { data: { full_name: fd.get("full_name"), phone: fd.get("phone"), role } }
+      });
+      if (error) return toast(error.message, "err");
+      toast("Account created! You're logged in.");
+    } catch(err){ console.error(err); toast("Something went wrong creating your account — please try again.","err"); }
   }
 });
 async function signOut(){
@@ -3252,11 +3258,13 @@ function viewProfile(){
 document.addEventListener("submit", async (e)=>{
   if (e.target.id === "profile-form"){
     e.preventDefault();
-    const fd = new FormData(e.target);
-    const { error } = await sb.from("profiles").update({ full_name: fd.get("full_name"), phone: fd.get("phone") }).eq("id", state.profile.id);
-    if (error) return toast(error.message,"err");
-    state.profile.full_name = fd.get("full_name"); state.profile.phone = fd.get("phone");
-    toast("Profile updated"); render();
+    try {
+      const fd = new FormData(e.target);
+      const { error } = await sb.from("profiles").update({ full_name: fd.get("full_name"), phone: fd.get("phone") }).eq("id", state.profile.id);
+      if (error) return toast(error.message,"err");
+      state.profile.full_name = fd.get("full_name"); state.profile.phone = fd.get("phone");
+      toast("Profile updated"); render();
+    } catch(err){ console.error(err); toast("Something went wrong updating your profile — please try again.","err"); }
   }
 });
 
@@ -4256,7 +4264,8 @@ async function saveAddStock(form){
 document.addEventListener("submit", async (e)=>{
   if (e.target.id === "add-stock-form"){
     e.preventDefault();
-    await saveAddStock(new FormData(e.target));
+    try { await saveAddStock(new FormData(e.target)); }
+    catch(err){ console.error(err); toast("Something went wrong adding stock — please try again.","err"); }
   }
 });
 async function viewStoreStockHistory(){
@@ -4377,33 +4386,37 @@ function updateDiscountPreview(){
 document.addEventListener("submit", async (e)=>{
   if (e.target.id === "cash-deposit-form"){
     e.preventDefault();
-    const fd = new FormData(e.target);
-    const amount = Number(fd.get("amount"));
-    if (isNaN(amount) || amount <= 0) return toast("Enter a valid amount","err");
-    const { error } = await sb.from("cash_deposits").insert({
-      amount, note: fd.get("note")||null, deposited_at: fd.get("deposited_at") || new Date().toISOString(),
-      created_by: state.profile.id,
-    });
-    if (error) return toast(error.message,"err");
-    toast("Deposit logged"); render();
+    try {
+      const fd = new FormData(e.target);
+      const amount = Number(fd.get("amount"));
+      if (isNaN(amount) || amount <= 0) return toast("Enter a valid amount","err");
+      const { error } = await sb.from("cash_deposits").insert({
+        amount, note: fd.get("note")||null, deposited_at: fd.get("deposited_at") || new Date().toISOString(),
+        created_by: state.profile.id,
+      });
+      if (error) return toast(error.message,"err");
+      toast("Deposit logged"); render();
+    } catch(err){ console.error(err); toast("Something went wrong logging the deposit — please try again.","err"); }
   }
 });
 document.addEventListener("submit", async (e)=>{
   if (e.target.id === "store-settings-form"){
     e.preventDefault();
-    const fd = new FormData(e.target);
-    const payload = {
-      name: fd.get("name"), category_id: fd.get("category_id")||null, description: fd.get("description")||null,
-      opening_time: fd.get("opening_time")||null, closing_time: fd.get("closing_time")||null,
-      address_line: fd.get("address_line")||null, landmark: fd.get("landmark")||null, area: fd.get("area")||null,
-      city: fd.get("city")||null, state: fd.get("state")||null, pincode: fd.get("pincode")||null,
-      accepts_cod: fd.get("accepts_cod")==="on", accepts_online: fd.get("accepts_online")==="on", same_day_delivery: fd.get("same_day_delivery")==="on",
-    };
-    const { error } = await sb.from("stores").update(payload).eq("id", state.store.id);
-    if (error) return toast(error.message,"err");
-    Object.assign(state.store, payload);
-    toast("Store details updated");
-    render();
+    try {
+      const fd = new FormData(e.target);
+      const payload = {
+        name: fd.get("name"), category_id: fd.get("category_id")||null, description: fd.get("description")||null,
+        opening_time: fd.get("opening_time")||null, closing_time: fd.get("closing_time")||null,
+        address_line: fd.get("address_line")||null, landmark: fd.get("landmark")||null, area: fd.get("area")||null,
+        city: fd.get("city")||null, state: fd.get("state")||null, pincode: fd.get("pincode")||null,
+        accepts_cod: fd.get("accepts_cod")==="on", accepts_online: fd.get("accepts_online")==="on", same_day_delivery: fd.get("same_day_delivery")==="on",
+      };
+      const { error } = await sb.from("stores").update(payload).eq("id", state.store.id);
+      if (error) return toast(error.message,"err");
+      Object.assign(state.store, payload);
+      toast("Store details updated");
+      render();
+    } catch(err){ console.error(err); toast("Something went wrong updating your store — please try again.","err"); }
   }
 });
 document.addEventListener("submit", async (e)=>{
@@ -6052,10 +6065,12 @@ async function revokeStaffInvite(id){
 document.addEventListener("submit", async (e)=>{
   if (e.target.id === "staff-invite-form"){
     e.preventDefault();
-    const fd = new FormData(e.target);
-    const { error } = await sb.from("staff_invites").insert({ email: fd.get("email").toLowerCase().trim(), invited_by: state.profile.id });
-    if (error) return toast(error.message.includes("duplicate")?"That email has already been invited":error.message,"err");
-    toast("Invite sent — share the signup link with them"); e.target.reset(); render();
+    try {
+      const fd = new FormData(e.target);
+      const { error } = await sb.from("staff_invites").insert({ email: fd.get("email").toLowerCase().trim(), invited_by: state.profile.id });
+      if (error) return toast(error.message.includes("duplicate")?"That email has already been invited":error.message,"err");
+      toast("Invite sent — share the signup link with them"); e.target.reset(); render();
+    } catch(err){ console.error(err); toast("Something went wrong sending the invite — please try again.","err"); }
   }
 });
 function viewAdminCategories(){
@@ -6323,14 +6338,16 @@ async function toggleStoreCoupon(id, val){
 document.addEventListener("submit", async (e)=>{
   if (e.target.id === "store-coupon-form"){
     e.preventDefault();
-    const fd = new FormData(e.target);
-    const { error } = await sb.from("coupons").insert({
-      code: fd.get("code").toUpperCase(), discount_type: fd.get("discount_type"), discount_value: fd.get("discount_value"),
-      min_order: fd.get("min_order")||0, max_discount: fd.get("max_discount")||null,
-      store_id: state.store.id, created_by: state.profile.id,
-    });
-    if (error) return toast(error.message.includes("duplicate")?"That coupon code is already taken":error.message,"err");
-    toast("Coupon created"); e.target.reset(); e.target.classList.add("hidden"); render();
+    try {
+      const fd = new FormData(e.target);
+      const { error } = await sb.from("coupons").insert({
+        code: fd.get("code").toUpperCase(), discount_type: fd.get("discount_type"), discount_value: fd.get("discount_value"),
+        min_order: fd.get("min_order")||0, max_discount: fd.get("max_discount")||null,
+        store_id: state.store.id, created_by: state.profile.id,
+      });
+      if (error) return toast(error.message.includes("duplicate")?"That coupon code is already taken":error.message,"err");
+      toast("Coupon created"); e.target.reset(); e.target.classList.add("hidden"); render();
+    } catch(err){ console.error(err); toast("Something went wrong creating the coupon — please try again.","err"); }
   }
 });
 async function viewAdminSettings(){
@@ -6388,23 +6405,25 @@ async function viewAdminSettings(){
 document.addEventListener("submit", async (e)=>{
   if (e.target.id === "admin-settings-form"){
     e.preventDefault();
-    const fd = new FormData(e.target);
-    const payload = {
-      city: fd.get("city"), invoice_prefix: fd.get("invoice_prefix"),
-      marketplace_fee: Number(fd.get("marketplace_fee")||0), cod_handling_fee: Number(fd.get("cod_handling_fee")||0),
-      default_commission_percent: Number(fd.get("default_commission_percent")||0),
-      free_delivery_threshold: Number(fd.get("free_delivery_threshold")||0),
-      delivery_tier_1_2: Number(fd.get("delivery_tier_1_2")||0), delivery_tier_3_4: Number(fd.get("delivery_tier_3_4")||0),
-      delivery_tier_5_8: Number(fd.get("delivery_tier_5_8")||0), delivery_tier_9plus: Number(fd.get("delivery_tier_9plus")||0),
-      dp_commission_tier_1_4: Number(fd.get("dp_commission_tier_1_4")||0), dp_commission_tier_5_8: Number(fd.get("dp_commission_tier_5_8")||0),
-      delivery_assignment_timeout_minutes: Number(fd.get("delivery_assignment_timeout_minutes")||10),
-      whatsapp_enabled: fd.get("whatsapp_enabled") === "on",
-    };
-    const { error } = await sb.from("platform_settings").update(payload).eq("id", 1);
-    if (error) return toast(error.message,"err");
-    await loadSettings();
-    toast("Settings saved");
-    render();
+    try {
+      const fd = new FormData(e.target);
+      const payload = {
+        city: fd.get("city"), invoice_prefix: fd.get("invoice_prefix"),
+        marketplace_fee: Number(fd.get("marketplace_fee")||0), cod_handling_fee: Number(fd.get("cod_handling_fee")||0),
+        default_commission_percent: Number(fd.get("default_commission_percent")||0),
+        free_delivery_threshold: Number(fd.get("free_delivery_threshold")||0),
+        delivery_tier_1_2: Number(fd.get("delivery_tier_1_2")||0), delivery_tier_3_4: Number(fd.get("delivery_tier_3_4")||0),
+        delivery_tier_5_8: Number(fd.get("delivery_tier_5_8")||0), delivery_tier_9plus: Number(fd.get("delivery_tier_9plus")||0),
+        dp_commission_tier_1_4: Number(fd.get("dp_commission_tier_1_4")||0), dp_commission_tier_5_8: Number(fd.get("dp_commission_tier_5_8")||0),
+        delivery_assignment_timeout_minutes: Number(fd.get("delivery_assignment_timeout_minutes")||10),
+        whatsapp_enabled: fd.get("whatsapp_enabled") === "on",
+      };
+      const { error } = await sb.from("platform_settings").update(payload).eq("id", 1);
+      if (error) return toast(error.message,"err");
+      await loadSettings();
+      toast("Settings saved");
+      render();
+    } catch(err){ console.error(err); toast("Something went wrong saving settings — please try again.","err"); }
   }
 });
 
@@ -6612,35 +6631,39 @@ function toggleCouponForm(){ document.getElementById("coupon-form").classList.to
 document.addEventListener("submit", async (e)=>{
   if (e.target.id === "coupon-form"){
     e.preventDefault();
-    const fd = new FormData(e.target);
-    const { error } = await sb.from("coupons").insert({
-      code: fd.get("code").toUpperCase(), discount_type: fd.get("discount_type"), discount_value: fd.get("discount_value"),
-      min_order: fd.get("min_order")||0, max_discount: fd.get("max_discount")||null,
-    });
-    if (error) return toast(error.message,"err");
-    toast("Coupon created"); await loadCoupons(); render();
+    try {
+      const fd = new FormData(e.target);
+      const { error } = await sb.from("coupons").insert({
+        code: fd.get("code").toUpperCase(), discount_type: fd.get("discount_type"), discount_value: fd.get("discount_value"),
+        min_order: fd.get("min_order")||0, max_discount: fd.get("max_discount")||null,
+      });
+      if (error) return toast(error.message,"err");
+      toast("Coupon created"); await loadCoupons(); render();
+    } catch(err){ console.error(err); toast("Something went wrong creating the coupon — please try again.","err"); }
   }
   if (e.target.id === "delivery-settings-form"){
     e.preventDefault();
-    const fd = new FormData(e.target);
-    const payload = {
-      delivery_tier_1_2: fd.get("delivery_tier_1_2"), delivery_tier_3_4: fd.get("delivery_tier_3_4"),
-      delivery_tier_5_8: fd.get("delivery_tier_5_8"), delivery_tier_9plus: fd.get("delivery_tier_9plus"),
-      dp_commission_tier_1_4: fd.get("dp_commission_tier_1_4"), dp_commission_tier_5_8: fd.get("dp_commission_tier_5_8"),
-      free_delivery_threshold: fd.get("free_delivery_threshold"),
-      marketplace_fee: fd.get("marketplace_fee"), cod_handling_fee: fd.get("cod_handling_fee"),
-      delivery_assignment_timeout_minutes: fd.get("delivery_assignment_timeout_minutes"),
-      whatsapp_enabled: fd.get("whatsapp_enabled")==="on",
-      tds_enabled: fd.get("tds_enabled")==="on", tds_percent: fd.get("tds_percent"),
-      tcs_enabled: fd.get("tcs_enabled")==="on", tcs_percent: fd.get("tcs_percent"),
-      platform_gst_enabled: fd.get("platform_gst_enabled")==="on", platform_gst_percent: fd.get("platform_gst_percent"),
-      invoice_prefix: fd.get("invoice_prefix")||"TP",
-    };
-    const { error: settingsErr } = await sb.from("platform_settings").update(payload).eq("id",1);
-    if (settingsErr) return toast(settingsErr.message,"err");
-    await loadSettings();
-    toast("Delivery & fee settings updated");
-    render();
+    try {
+      const fd = new FormData(e.target);
+      const payload = {
+        delivery_tier_1_2: fd.get("delivery_tier_1_2"), delivery_tier_3_4: fd.get("delivery_tier_3_4"),
+        delivery_tier_5_8: fd.get("delivery_tier_5_8"), delivery_tier_9plus: fd.get("delivery_tier_9plus"),
+        dp_commission_tier_1_4: fd.get("dp_commission_tier_1_4"), dp_commission_tier_5_8: fd.get("dp_commission_tier_5_8"),
+        free_delivery_threshold: fd.get("free_delivery_threshold"),
+        marketplace_fee: fd.get("marketplace_fee"), cod_handling_fee: fd.get("cod_handling_fee"),
+        delivery_assignment_timeout_minutes: fd.get("delivery_assignment_timeout_minutes"),
+        whatsapp_enabled: fd.get("whatsapp_enabled")==="on",
+        tds_enabled: fd.get("tds_enabled")==="on", tds_percent: fd.get("tds_percent"),
+        tcs_enabled: fd.get("tcs_enabled")==="on", tcs_percent: fd.get("tcs_percent"),
+        platform_gst_enabled: fd.get("platform_gst_enabled")==="on", platform_gst_percent: fd.get("platform_gst_percent"),
+        invoice_prefix: fd.get("invoice_prefix")||"TP",
+      };
+      const { error: settingsErr } = await sb.from("platform_settings").update(payload).eq("id",1);
+      if (settingsErr) return toast(settingsErr.message,"err");
+      await loadSettings();
+      toast("Delivery & fee settings updated");
+      render();
+    } catch(err){ console.error(err); toast("Something went wrong saving settings — please try again.","err"); }
   }
 });
 async function toggleCoupon(id, val){ await sb.from("coupons").update({ is_active: val }).eq("id", id); await loadCoupons(); render(); }
