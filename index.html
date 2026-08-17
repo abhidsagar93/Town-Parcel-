@@ -689,7 +689,7 @@ async function render(){
     if (r === "#/store-cash-bank") return requireAuth("store_owner", async () => { await loadOrders(); renderShell(shell(await viewStoreCashBank())); });
     if (r === "#/store-gst-report") return requireAuth("store_owner", async () => { await loadOrders(); renderShell(shell(await viewStoreGstReport())); });
     if (r === "#/store-order-summary") return requireAuth("store_owner", async () => { await loadOrders(); renderShell(shell(await viewStoreOrderSummary())); });
-    if (r === "#/store-products") return requireAuth("store_owner", async () => { await loadStoreProducts(); renderShell(shell(viewStoreProducts())); });
+    if (r === "#/store-products") return requireAuth("store_owner", async () => { await loadStoreProducts(); renderShell(shell(viewStoreProducts())); renderVariantRows(); });
     if (r === "#/delivery-dashboard") return requireAuth("delivery_partner", async () => { await loadMasterOrders(); renderShell(shell(await viewDeliveryDashboard())); drawDpDashboardChart(); });
     if (r === "#/delivery-earnings") return requireAuth("delivery_partner", async () => { await loadMasterOrders(); renderShell(shell(viewDpEarnings())); });
     if (r === "#/delivery-history") return requireAuth("delivery_partner", async () => { await loadMasterOrders(); renderShell(shell(viewDpHistory())); });
@@ -702,6 +702,7 @@ async function render(){
     if (r === "#/admin-whatsapp-log") return requireAuth(["admin","staff"], async () => { renderShell(shell(await viewAdminWhatsappLog())); });
     if (r === "#/admin-coupons") return requireAuth("admin", async () => { await loadCoupons(); renderShell(shell(viewAdminCoupons())); });
     if (r === "#/admin-settings") return requireAuth("admin", async () => { renderShell(shell(await viewAdminSettings())); });
+    if (r === "#/admin-expenses") return requireAuth(["admin","staff"], async () => { renderShell(shell(await viewAdminExpenses())); });
     if (r === "#/admin-products") return requireAuth(["admin","staff"], async () => { renderShell(shell(await viewAdminProducts())); });
     if (r === "#/admin-issues") return requireAuth(["admin","staff"], async () => { renderShell(shell(await viewAdminIssues())); });
     if (r === "#/admin-advertisements") return requireAuth("admin", async () => { renderShell(shell(await viewAdminAdvertisements())); });
@@ -4419,9 +4420,16 @@ function viewStoreProducts(){
             </label>`; }).join("")}
         </div>
       </div>
+      <div class="col-span-2 border-t border-slate-100 pt-3">
+        <div class="flex items-center justify-between mb-2">
+          <label class="text-xs font-semibold text-slate-600">Variants (optional) — colors, sizes, pack sizes with their own price/SKU</label>
+          <button type="button" onclick="addVariantRow()" class="text-xs px-2 py-1 bg-brand-50 text-brand-600 rounded-lg font-semibold">+ Add Variant</button>
+        </div>
+        <div id="variant-rows" class="space-y-2"></div>
+      </div>
       <div class="col-span-2 flex gap-2">
         <button class="flex-1 bg-slate-900 text-white rounded-lg py-2 text-sm font-semibold mt-1">${p?"Save Changes":"Save Product"}</button>
-        ${p?`<button type="button" onclick="editingProduct=null;render()" class="px-4 rounded-lg border border-slate-200 text-sm font-semibold mt-1">Cancel</button>`:""}
+        ${p?`<button type="button" onclick="editingProduct=null;editingProductVariants=[];render()" class="px-4 rounded-lg border border-slate-200 text-sm font-semibold mt-1">Cancel</button>`:""}
       </div>
     </form>
     <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
@@ -4436,15 +4444,49 @@ function viewStoreProducts(){
     </div>
   </div>`;
 }
-function editProduct(id){
+let editingProductVariants = [];
+async function editProduct(id){
   editingProduct = state.products.find(p=>p.id===id) || null;
+  editingProductVariants = [];
+  if (editingProduct){
+    const { data } = await sb.from("product_variants").select("*").eq("product_id", editingProduct.id).order("created_at");
+    editingProductVariants = data || [];
+  }
   render();
   window.scrollTo(0,0);
 }
 async function openNewProductForm(){
   editingProduct = null;
+  editingProductVariants = [];
   await render();
   toggleProductForm(true);
+}
+function addVariantRow(){
+  editingProductVariants.push({ color:'', size:'', sub_unit:'', sku:'', barcode:'', price:'', compare_price:'', stock_qty:0 });
+  renderVariantRows();
+}
+function removeVariantRow(idx){
+  editingProductVariants.splice(idx,1);
+  renderVariantRows();
+}
+function updateVariantField(idx, field, value){
+  if (editingProductVariants[idx]) editingProductVariants[idx][field] = value;
+}
+function renderVariantRows(){
+  const container = document.getElementById("variant-rows");
+  if (!container) return;
+  container.innerHTML = editingProductVariants.map((v,idx)=>`
+    <div class="border border-slate-200 rounded-xl p-3 grid grid-cols-2 gap-2 relative">
+      <button type="button" onclick="removeVariantRow(${idx})" class="absolute top-2 right-2 text-red-400 text-xs font-semibold">✕ Remove</button>
+      <input placeholder="Color" value="${escapeHtml(v.color||'')}" oninput="updateVariantField(${idx},'color',this.value)" class="border border-slate-200 rounded-lg px-2 py-1.5 text-xs"/>
+      <input placeholder="Size" value="${escapeHtml(v.size||'')}" oninput="updateVariantField(${idx},'size',this.value)" class="border border-slate-200 rounded-lg px-2 py-1.5 text-xs"/>
+      <input placeholder="Sub Unit (e.g. 500g)" value="${escapeHtml(v.sub_unit||'')}" oninput="updateVariantField(${idx},'sub_unit',this.value)" class="border border-slate-200 rounded-lg px-2 py-1.5 text-xs col-span-2"/>
+      <input placeholder="SKU" value="${escapeHtml(v.sku||'')}" oninput="updateVariantField(${idx},'sku',this.value)" class="border border-slate-200 rounded-lg px-2 py-1.5 text-xs"/>
+      <input placeholder="Barcode" value="${escapeHtml(v.barcode||'')}" oninput="updateVariantField(${idx},'barcode',this.value)" class="border border-slate-200 rounded-lg px-2 py-1.5 text-xs"/>
+      <input required type="number" step="0.01" min="0" placeholder="Price (₹)" value="${v.price||''}" oninput="updateVariantField(${idx},'price',this.value)" class="border border-slate-200 rounded-lg px-2 py-1.5 text-xs"/>
+      <input type="number" step="0.01" min="0" placeholder="Compare Price (₹)" value="${v.compare_price||''}" oninput="updateVariantField(${idx},'compare_price',this.value)" class="border border-slate-200 rounded-lg px-2 py-1.5 text-xs"/>
+      <input type="number" min="0" placeholder="Stock" value="${v.stock_qty||0}" oninput="updateVariantField(${idx},'stock_qty',this.value)" class="border border-slate-200 rounded-lg px-2 py-1.5 text-xs col-span-2"/>
+    </div>`).join("") || `<div class="text-xs text-slate-400">No variants yet — most products don't need this. Only add variants if you sell the same item in different colors, sizes, or pack sizes at different prices.</div>`;
 }
 function toggleProductForm(forceOpen){
   const form = document.getElementById("product-form");
@@ -4527,16 +4569,38 @@ document.addEventListener("submit", async (e)=>{
         price, mrp: fd.get("mrp")||null, stock_qty: fd.get("stock_qty")||100, stock_unit: unitType, description: fd.get("description")||null, hsn_code: fd.get("hsn_code")||null,
         image_url: fd.get("image_url")||null, image_url_2: fd.get("image_url_2")||null, image_url_3: fd.get("image_url_3")||null,
       };
-      let error;
+      let error, productId;
       if (editingProduct){
-        ({ error } = await sb.from("products").update(payload).eq("id", editingProduct.id));
+        productId = editingProduct.id;
+        ({ error } = await sb.from("products").update(payload).eq("id", productId));
       } else {
         if (!state.store || !state.store.id){ toast("Couldn't find your store — please reload the page and try again.","err"); return; }
-        ({ error } = await sb.from("products").insert({ store_id: state.store.id, ...payload }));
+        const { data: inserted, error: insertErr } = await sb.from("products").insert({ store_id: state.store.id, ...payload }).select("id").single();
+        error = insertErr;
+        productId = inserted?.id;
       }
       if (error){ toast(error.message,"err"); return; }
+
+      // Sync variants to exactly match what's in the form — simplest way to handle
+      // adds/edits/removes in one pass without tracking per-row diffs.
+      if (productId){
+        await sb.from("product_variants").delete().eq("product_id", productId);
+        const validVariants = editingProductVariants
+          .filter(v=>v.price && Number(v.price) > 0)
+          .map(v=>({
+            product_id: productId, color: v.color||null, size: v.size||null, sub_unit: v.sub_unit||null,
+            sku: v.sku||null, barcode: v.barcode||null, price: v.price, compare_price: v.compare_price||null,
+            stock_qty: v.stock_qty||0,
+          }));
+        if (validVariants.length){
+          const { error: varErr } = await sb.from("product_variants").insert(validVariants);
+          if (varErr) toast("Product saved, but variants had an issue: "+varErr.message,"err");
+        }
+      }
+
       toast(editingProduct?"Product updated":"Product added");
       editingProduct = null;
+      editingProductVariants = [];
       await loadStoreProducts(); render();
     } catch(err){
       console.error("Product save failed:", err);
@@ -4837,6 +4901,7 @@ const ADMIN_NAV_ITEMS = [
     ["#/admin-settlements","Settlements"],
     ["#/admin-cash-bank","Cash/Bank",null,true],
     ["#/admin-financial-reports","Financial Reports",null,true],
+    ["#/admin-expenses","Expenses",null,true],
   ]},
   ["#/admin-issues","Issues"],
   ["#/admin-advertisements","Advertisements",null,true],
@@ -6514,6 +6579,78 @@ document.addEventListener("submit", async (e)=>{
       if (error) return toast(error.message.includes("duplicate")?"That coupon code is already taken":error.message,"err");
       toast("Coupon created"); e.target.reset(); e.target.classList.add("hidden"); render();
     } catch(err){ console.error(err); toast("Something went wrong creating the coupon — please try again.","err"); }
+  }
+});
+async function viewAdminExpenses(){
+  const [{ data: expenses }, { data: categories }] = await Promise.all([
+    sb.from("expenses").select("*, expense_categories(name), stores(name)").order("expense_date",{ascending:false}).limit(200),
+    sb.from("expense_categories").select("*").order("name"),
+  ]);
+  const list = expenses || [];
+  const now = new Date();
+  const thisMonth = list.filter(e=>{
+    const d = new Date(e.expense_date);
+    return d.getMonth()===now.getMonth() && d.getFullYear()===now.getFullYear();
+  });
+  const monthTotal = thisMonth.reduce((s,e)=>s+Number(e.amount),0);
+  const allTimeTotal = list.reduce((s,e)=>s+Number(e.amount),0);
+  return `<div class="pt-6">
+    <a href="#/admin-dashboard" class="text-sm text-slate-500 flex items-center gap-1 mb-3">${icon('back','w-4 h-4')} Back to Dashboard</a>
+    <h1 class="text-xl font-bold mb-4">Expenses</h1>
+    <div class="grid grid-cols-2 gap-3 mb-5">
+      ${inventoryStatCard("This Month", money(monthTotal), "wallet")}
+      ${inventoryStatCard("All Time", money(allTimeTotal), "wallet")}
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-card p-4 mb-5">
+      <div class="font-semibold text-sm mb-3">Log an Expense</div>
+      <form id="expense-form" class="space-y-3">
+        <div><label class="text-xs text-slate-500 mb-1 block">Description</label><input required name="description" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"/></div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="text-xs text-slate-500 mb-1 block">Amount</label><input required type="number" step="0.01" min="0.01" name="amount" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"/></div>
+          <div><label class="text-xs text-slate-500 mb-1 block">Date</label><input required type="date" name="expense_date" value="${localDateStr(new Date())}" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"/></div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="text-xs text-slate-500 mb-1 block">Category</label><select name="category_id" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"><option value="">— None —</option>${(categories||[]).map(c=>`<option value="${c.id}">${escapeHtml(c.name)}</option>`).join("")}</select></div>
+          <div><label class="text-xs text-slate-500 mb-1 block">Paid Via</label><select name="paid_via" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"><option value="bank">Bank</option><option value="cash">Cash</option></select></div>
+        </div>
+        <div><label class="text-xs text-slate-500 mb-1 block">Store (optional — leave blank for platform-level expense)</label><select name="store_id" class="w-full border border-slate-200 rounded-xl px-3 py-2 text-sm"><option value="">— Platform-level —</option>${state.stores.map(s=>`<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("")}</select></div>
+        <button type="submit" class="w-full bg-brand-600 text-white rounded-xl py-2.5 text-sm font-semibold">Save Expense</button>
+      </form>
+    </div>
+
+    <h2 class="font-bold mb-3">Recent Expenses</h2>
+    <div class="overflow-x-auto bg-white rounded-2xl shadow-card">
+      <table class="w-full text-xs">
+        <thead class="bg-slate-50 text-slate-500"><tr>
+          <th class="p-3 text-left">Date</th><th class="p-3 text-left">Description</th><th class="p-3 text-left">Category</th>
+          <th class="p-3 text-left">Store</th><th class="p-3 text-left">Paid Via</th><th class="p-3 text-right">Amount</th>
+        </tr></thead>
+        <tbody>${list.map(e=>`<tr class="border-t border-slate-50">
+          <td class="p-3">${fmtDate(e.expense_date)}</td>
+          <td class="p-3">${escapeHtml(e.description)}</td>
+          <td class="p-3">${escapeHtml(e.expense_categories?.name||"—")}</td>
+          <td class="p-3">${escapeHtml(e.stores?.name||"Platform")}</td>
+          <td class="p-3 capitalize">${e.paid_via}</td>
+          <td class="p-3 text-right font-semibold">${money(e.amount)}</td>
+        </tr>`).join("") || `<tr><td class="p-4 text-slate-400 text-center" colspan="6">No expenses logged yet.</td></tr>`}</tbody>
+      </table>
+    </div>
+  </div>`;
+}
+document.addEventListener("submit", async (e)=>{
+  if (e.target.id === "expense-form"){
+    e.preventDefault();
+    try {
+      const fd = new FormData(e.target);
+      const { error } = await sb.from("expenses").insert({
+        description: fd.get("description"), amount: fd.get("amount"), expense_date: fd.get("expense_date"),
+        category_id: fd.get("category_id")||null, paid_via: fd.get("paid_via"), store_id: fd.get("store_id")||null,
+        created_by: state.profile.id,
+      });
+      if (error) return toast(error.message,"err");
+      toast("Expense logged"); render();
+    } catch(err){ console.error(err); toast("Something went wrong logging the expense — please try again.","err"); }
   }
 });
 async function viewAdminSettings(){
